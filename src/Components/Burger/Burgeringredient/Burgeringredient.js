@@ -37,8 +37,8 @@ class Burgeringredient extends React.Component {
     return ingredient;
   }
 }
- Burgeringredient.PropTypes ={
-     type: PropTypes.string.isRequired
- };
+Burgeringredient.PropTypes = {
+  type: PropTypes.string.isRequired
+};
 
 export default Burgeringredient;

@@ -1,0 +1,6 @@
+{
+    "explorer.incrementalNaming": "smart",
+    "json.trace.server": "verbose",
+    "less.lint.argumentsInColorFunction": "warning",
+    "less.lint.boxModel": "warning"
+}
