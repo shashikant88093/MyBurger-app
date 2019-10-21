@@ -4,7 +4,9 @@ import Burger from "../../Components/Burger/Burger";
 import Buildcontrols from "../../Components/Burger/BuildControls/Buildercontrols";
 import Model from "../../Components/UI/Modal/Modal";
 import OrderSummary from "../../Components/Burger/OrderSummary/OrderSummary";
-
+import Axios from "../../Axios-orders";
+import Spinner from "../../Components/UI/Spinner/Spinner";
+import withErrorHandler from "../../Hoc/withErrorHandler/withErrorHandler";
 const INGREDIENT_PRICES = {
   salad: 0.5,
   cheese: 0.4,
@@ -13,16 +15,19 @@ const INGREDIENT_PRICES = {
 };
 class BurgerBuilder extends Component {
   state = {
-    ingredients: {
-      salad: 0,
-      bacon: 0,
-      cheese: 0,
-      meat: 0
-    },
+    ingredients: null,
     totalPrice: 0,
     purchasable: false,
-    purchasing: false
+    purchasing: false,
+    loading: false
   };
+  componentDidMount() {
+    Axios.get("https://burger-app-2ae38.firebaseio.com/ingredients.json").then(
+      response => {
+        this.setState({ ingredients: response.data });
+      }
+    );
+  }
   updatePurchaseState() {
     const ingredients = {
       ...this.state.ingredients
@@ -55,6 +60,31 @@ class BurgerBuilder extends Component {
   purchaseCancelHandler = () => {
     this.setState({ purchasing: false });
   };
+  purchaseContinuedHandler = () => {
+    // alert("yes continue")
+    this.setState({ loading: true });
+    const order = {
+      ingredients: this.state.ingredients,
+      price: this.state.totalPrice,
+      customer: {
+        name: "Shashikant Kumar",
+        address: {
+          street: "Teststreet 1",
+          zipCode: "600113",
+          country: "India"
+        },
+        email: "test@test.com"
+      },
+      deliveryMethod: "fastest"
+    };
+    Axios.post("/orders.json", order)
+      .then(response => {
+        this.setState({ loading: false });
+      })
+      .catch(error => {
+        this.setState({ loading: false });
+      });
+  };
   removeIngredientHandler = type => {
     const oldCount = this.state.ingredients[type];
     if (oldCount <= 0) {
@@ -78,31 +108,49 @@ class BurgerBuilder extends Component {
     for (let key in disabledInfo) {
       disabledInfo[key] = disabledInfo[key] <= 0;
     }
+
+    let orderSummary = null;
+    let burger = <Spinner />;
+    if (this.state.ingredients) {
+      burger = (
+        <Aux>
+          <Burger ingredients={this.state.ingredients} />
+          <Buildcontrols
+            ingredientAdded={this.addIngredientHandler}
+            ingredientRemove={this.removeIngredientHandler}
+            disabled={disabledInfo}
+            price={this.state.totalPrice}
+            ordered={this.purchaseHandler}
+            purchasable={this.state.purchasable}
+          />
+        </Aux>
+      );
+      orderSummary = (
+        <OrderSummary
+          ingredients={this.state.ingredients}
+          price={this.state.totalPrice}
+          purchaseCancelled={this.purchaseHandler}
+          purchaseContinued={this.purchaseContinuedHandler}
+        />
+      );
+    }
+
+    if (this.state.loading) {
+      orderSummary = <Spinner />;
+    }
+
     return (
       <Aux>
         <Model
           show={this.state.purchasing}
           modalClosed={this.purchaseCancelHandler}
         >
-          <OrderSummary
-            ingredients={this.state.ingredients}
-            price ={this.state.totalPrice}
-            purchaseCancelled={this.purchaseHandler}
-            purchaseContinued={this.purchaseContinuedHandler}
-          />
+          {orderSummary}
         </Model>
-        <Burger ingredients={this.state.ingredients} />
-        <Buildcontrols
-          ingredientAdded={this.addIngredientHandler}
-          ingredientRemove={this.removeIngredientHandler}
-          disabled={disabledInfo}
-          price={this.state.totalPrice}
-          ordered={this.purchaseHandler}
-          purchasable={this.state.purchasable}
-        />
+        {burger}
       </Aux>
     );
   }
 }
 
-export default BurgerBuilder;
+export default withErrorHandler(BurgerBuilder, Axios);
